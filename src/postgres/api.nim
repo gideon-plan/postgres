@@ -93,36 +93,47 @@ proc clear*(r: var PGQueryResult) {.pg_err.} =
     r.res = nil
 
 proc raw*(r: PGQueryResult): PGresult {.ok_inline.} =
+  ## Access the underlying PGresult.
   r.res
 
 proc status*(r: PGQueryResult): ExecStatusType {.ok.} =
+  ## Get the execution status of the result.
   PQresultStatus(r.res)
 
 proc ntuples*(r: PGQueryResult): int {.ok.} =
+  ## Get the number of rows in the result.
   int(PQntuples(r.res))
 
 proc nfields*(r: PGQueryResult): int {.ok.} =
+  ## Get the number of columns in the result.
   int(PQnfields(r.res))
 
 proc fname*(r: PGQueryResult; col: ColIdx): string {.ok.} =
+  ## Get the column name at the given index.
   $PQfname(r.res, cint(int(col)))
 
 proc ftype*(r: PGQueryResult; col: ColIdx): Oid {.ok.} =
+  ## Get the OID of the column type.
   PQftype(r.res, cint(int(col)))
 
 proc getvalue*(r: PGQueryResult; row: RowIdx; col: ColIdx): string {.ok.} =
+  ## Get the value at (row, col) as a string.
   $PQgetvalue(r.res, cint(int(row)), cint(int(col)))
 
 proc getlength*(r: PGQueryResult; row: RowIdx; col: ColIdx): int {.ok.} =
+  ## Get the byte length of the value at (row, col).
   int(PQgetlength(r.res, cint(int(row)), cint(int(col))))
 
 proc getisnull*(r: PGQueryResult; row: RowIdx; col: ColIdx): bool {.ok.} =
+  ## True if the value at (row, col) is NULL.
   PQgetisnull(r.res, cint(int(row)), cint(int(col))) == 1
 
 proc cmd_status*(r: PGQueryResult): string {.ok.} =
+  ## Get the command status tag (e.g. "INSERT 0 1").
   $PQcmdStatus(r.res)
 
 proc cmd_tuples*(r: PGQueryResult): string {.ok.} =
+  ## Get the number of rows affected as a string.
   $PQcmdTuples(r.res)
 
 #=======================================================================================================================
@@ -186,14 +197,17 @@ proc exec_prepared*(db: PGDatabase; name: StmtName;
 #=======================================================================================================================
 
 proc begin*(db: PGDatabase) {.pg_err.} =
+  ## Start a transaction.
   var r = db.exec(SqlText("BEGIN"))
   r.clear()
 
 proc commit*(db: PGDatabase) {.pg_err.} =
+  ## Commit the current transaction.
   var r = db.exec(SqlText("COMMIT"))
   r.clear()
 
 proc rollback*(db: PGDatabase) {.pg_err.} =
+  ## Rollback the current transaction.
   var r = db.exec(SqlText("ROLLBACK"))
   r.clear()
 
@@ -202,24 +216,31 @@ proc rollback*(db: PGDatabase) {.pg_err.} =
 #=======================================================================================================================
 
 proc database*(db: PGDatabase): string {.ok.} =
+  ## Get the database name of the connection.
   $PQdb(db.conn)
 
 proc user*(db: PGDatabase): string {.ok.} =
+  ## Get the user name of the connection.
   $PQuser(db.conn)
 
 proc host*(db: PGDatabase): string {.ok.} =
+  ## Get the server host name of the connection.
   $PQhost(db.conn)
 
 proc port*(db: PGDatabase): string {.ok.} =
+  ## Get the port of the connection.
   $PQport(db.conn)
 
 proc server_version*(db: PGDatabase): int {.ok.} =
+  ## Get the server version as an integer.
   int(PQserverVersion(db.conn))
 
 proc error_message*(db: PGDatabase): string {.ok.} =
+  ## Get the most recent error message.
   $PQerrorMessage(db.conn)
 
 proc transaction_status*(db: PGDatabase): PGTransactionStatusType {.ok.} =
+  ## Get the current in-transaction status.
   PQtransactionStatus(db.conn)
 
 #=======================================================================================================================
@@ -227,13 +248,16 @@ proc transaction_status*(db: PGDatabase): PGTransactionStatusType {.ok.} =
 #=======================================================================================================================
 
 proc put_copy_data*(db: PGDatabase; data: string): int {.pg_err.} =
+  ## Send data to the server during a COPY FROM STDIN operation.
   int(PQputCopyData(db.conn, data.cstring, cint(data.len)))
 
 proc put_copy_end*(db: PGDatabase; errormsg: string = ""): int {.pg_err.} =
+  ## Signal end of COPY FROM STDIN data.
   let msg = if errormsg.len > 0: errormsg.cstring else: nil
   int(PQputCopyEnd(db.conn, msg))
 
 proc get_copy_data*(db: PGDatabase; async: bool = false): (int, string) {.pg_err.} =
+  ## Receive data from the server during a COPY TO STDOUT operation.
   var buf: cstring
   let nbytes = PQgetCopyData(db.conn, addr buf, cint(ord(async)))
   if nbytes > 0 and not buf.isNil:
@@ -248,13 +272,16 @@ proc get_copy_data*(db: PGDatabase; async: bool = false): (int, string) {.pg_err
 #=======================================================================================================================
 
 proc try_exec*(db: PGDatabase; sql: SqlText): Maybe[PGQueryResult, ref PGError] {.pg_err.} =
+  ## Execute a simple query, returning Maybe instead of raising.
   try: Maybe[PGQueryResult, ref PGError].yes(db.exec(sql))
   except PGError as e: Maybe[PGQueryResult, ref PGError].no(e)
 
 proc try_exec*(db: PGDatabase; sql: SqlText; params: openArray[string]): Maybe[PGQueryResult, ref PGError] {.pg_err.} =
+  ## Execute a parameterized query, returning Maybe instead of raising.
   try: Maybe[PGQueryResult, ref PGError].yes(db.exec(sql, params))
   except PGError as e: Maybe[PGQueryResult, ref PGError].no(e)
 
 proc try_prepare*(db: PGDatabase; name: StmtName; sql: SqlText; nparams: int = 0): Maybe[PGQueryResult, ref PGError] {.pg_err.} =
+  ## Prepare a named statement, returning Maybe instead of raising.
   try: Maybe[PGQueryResult, ref PGError].yes(db.prepare(name, sql, nparams))
   except PGError as e: Maybe[PGQueryResult, ref PGError].no(e)
