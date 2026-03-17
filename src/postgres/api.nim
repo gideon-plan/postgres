@@ -13,6 +13,23 @@ raises_error(pg_err, [IOError], [])
 # -----------------------------------------------------------------------
 
 type
+  StmtName* = distinct string
+  SqlText* = distinct string
+  RowIdx* = distinct int
+  ColIdx* = distinct int
+
+func `$`*(v: StmtName): string {.borrow.}
+func `$`*(v: SqlText): string {.borrow.}
+func `$`*(v: RowIdx): string {.borrow.}
+func `$`*(v: ColIdx): string {.borrow.}
+func `==`*(a, b: StmtName): bool {.borrow.}
+func `==`*(a, b: SqlText): bool {.borrow.}
+func `==`*(a, b: RowIdx): bool {.borrow.}
+func `==`*(a, b: ColIdx): bool {.borrow.}
+func len*(v: StmtName): int {.borrow.}
+func len*(v: SqlText): int {.borrow.}
+
+type
   PGError* = object of IOError
     ## PostgreSQL error.
     sqlstate*: string
@@ -86,20 +103,20 @@ proc ntuples*(r: PGQueryResult): int {.ok.} =
 proc nfields*(r: PGQueryResult): int {.ok.} =
   int(PQnfields(r.res))
 
-proc fname*(r: PGQueryResult; col: int): string {.ok.} =
-  $PQfname(r.res, cint(col))
+proc fname*(r: PGQueryResult; col: ColIdx): string {.ok.} =
+  $PQfname(r.res, cint(int(col)))
 
-proc ftype*(r: PGQueryResult; col: int): Oid {.ok.} =
-  PQftype(r.res, cint(col))
+proc ftype*(r: PGQueryResult; col: ColIdx): Oid {.ok.} =
+  PQftype(r.res, cint(int(col)))
 
-proc getvalue*(r: PGQueryResult; row, col: int): string {.ok.} =
-  $PQgetvalue(r.res, cint(row), cint(col))
+proc getvalue*(r: PGQueryResult; row: RowIdx; col: ColIdx): string {.ok.} =
+  $PQgetvalue(r.res, cint(int(row)), cint(int(col)))
 
-proc getlength*(r: PGQueryResult; row, col: int): int {.ok.} =
-  int(PQgetlength(r.res, cint(row), cint(col)))
+proc getlength*(r: PGQueryResult; row: RowIdx; col: ColIdx): int {.ok.} =
+  int(PQgetlength(r.res, cint(int(row)), cint(int(col))))
 
-proc getisnull*(r: PGQueryResult; row, col: int): bool {.ok.} =
-  PQgetisnull(r.res, cint(row), cint(col)) == 1
+proc getisnull*(r: PGQueryResult; row: RowIdx; col: ColIdx): bool {.ok.} =
+  PQgetisnull(r.res, cint(int(row)), cint(int(col))) == 1
 
 proc cmd_status*(r: PGQueryResult): string {.ok.} =
   $PQcmdStatus(r.res)
@@ -111,22 +128,22 @@ proc cmd_tuples*(r: PGQueryResult): string {.ok.} =
 # Query execution
 # -----------------------------------------------------------------------
 
-proc exec*(db: PGDatabase; sql: string): PGQueryResult {.pg_err.} =
+proc exec*(db: PGDatabase; sql: SqlText): PGQueryResult {.pg_err.} =
   ## Execute a simple query.
-  check_result(db.conn, PQexec(db.conn, sql.cstring))
+  check_result(db.conn, PQexec(db.conn, ($sql).cstring))
 
-proc exec*(db: PGDatabase; sql: string; params: openArray[string]): PGQueryResult {.pg_err.} =
+proc exec*(db: PGDatabase; sql: SqlText; params: openArray[string]): PGQueryResult {.pg_err.} =
   ## Execute a parameterized query.
   var c_params = newSeq[cstring](params.len)
   for i in 0 ..< params.len:
     c_params[i] = params[i].cstring
   let param_ptr = if params.len > 0: addr c_params[0] else: nil
   check_result(db.conn, PQexecParams(
-    db.conn, sql.cstring, cint(params.len),
+    db.conn, ($sql).cstring, cint(params.len),
     nil, param_ptr, nil, nil, 0
   ))
 
-proc exec_with_nulls*(db: PGDatabase; sql: string;
+proc exec_with_nulls*(db: PGDatabase; sql: SqlText;
                       params: openArray[string];
                       nulls: openArray[bool]): PGQueryResult {.pg_err.} =
   ## Execute a parameterized query with explicit NULL handling.
@@ -138,7 +155,7 @@ proc exec_with_nulls*(db: PGDatabase; sql: string;
       c_params[i] = params[i].cstring
   let param_ptr = if params.len > 0: addr c_params[0] else: nil
   check_result(db.conn, PQexecParams(
-    db.conn, sql.cstring, cint(params.len),
+    db.conn, ($sql).cstring, cint(params.len),
     nil, param_ptr, nil, nil, 0
   ))
 
@@ -146,12 +163,12 @@ proc exec_with_nulls*(db: PGDatabase; sql: string;
 # Prepared statements
 # -----------------------------------------------------------------------
 
-proc prepare*(db: PGDatabase; name, sql: string; nparams: int = 0): PGQueryResult {.pg_err.} =
+proc prepare*(db: PGDatabase; name: StmtName; sql: SqlText; nparams: int = 0): PGQueryResult {.pg_err.} =
   ## Prepare a named statement.
-  check_result(db.conn, PQprepare(db.conn, name.cstring, sql.cstring,
+  check_result(db.conn, PQprepare(db.conn, ($name).cstring, ($sql).cstring,
                                    cint(nparams), nil))
 
-proc exec_prepared*(db: PGDatabase; name: string;
+proc exec_prepared*(db: PGDatabase; name: StmtName;
                     params: openArray[string]): PGQueryResult {.pg_err.} =
   ## Execute a prepared statement.
   var c_params = newSeq[cstring](params.len)
@@ -159,7 +176,7 @@ proc exec_prepared*(db: PGDatabase; name: string;
     c_params[i] = params[i].cstring
   let param_ptr = if params.len > 0: addr c_params[0] else: nil
   check_result(db.conn, PQexecPrepared(
-    db.conn, name.cstring, cint(params.len),
+    db.conn, ($name).cstring, cint(params.len),
     param_ptr, nil, nil, 0
   ))
 
@@ -168,15 +185,15 @@ proc exec_prepared*(db: PGDatabase; name: string;
 # -----------------------------------------------------------------------
 
 proc begin*(db: PGDatabase) {.pg_err.} =
-  var r = db.exec("BEGIN")
+  var r = db.exec(SqlText("BEGIN"))
   r.clear()
 
 proc commit*(db: PGDatabase) {.pg_err.} =
-  var r = db.exec("COMMIT")
+  var r = db.exec(SqlText("COMMIT"))
   r.clear()
 
 proc rollback*(db: PGDatabase) {.pg_err.} =
-  var r = db.exec("ROLLBACK")
+  var r = db.exec(SqlText("ROLLBACK"))
   r.clear()
 
 # -----------------------------------------------------------------------
