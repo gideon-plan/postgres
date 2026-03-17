@@ -1,6 +1,7 @@
 ## High-level PostgreSQL API wrapping libpq.
 
 import basis/code/throw
+import basis/code/maybe
 
 import postgres/ffi
 
@@ -241,3 +242,19 @@ proc get_copy_data*(db: PGDatabase; async: bool = false): (int, string) {.pg_err
     (int(nbytes), data)
   else:
     (int(nbytes), "")
+
+# -----------------------------------------------------------------------
+# Maybe overloads (non-raising)
+# -----------------------------------------------------------------------
+
+proc try_exec*(db: PGDatabase; sql: SqlText): Maybe[PGQueryResult, ref PGError] {.pg_err.} =
+  try: Maybe[PGQueryResult, ref PGError].yes(db.exec(sql))
+  except PGError as e: Maybe[PGQueryResult, ref PGError].no(e)
+
+proc try_exec*(db: PGDatabase; sql: SqlText; params: openArray[string]): Maybe[PGQueryResult, ref PGError] {.pg_err.} =
+  try: Maybe[PGQueryResult, ref PGError].yes(db.exec(sql, params))
+  except PGError as e: Maybe[PGQueryResult, ref PGError].no(e)
+
+proc try_prepare*(db: PGDatabase; name: StmtName; sql: SqlText; nparams: int = 0): Maybe[PGQueryResult, ref PGError] {.pg_err.} =
+  try: Maybe[PGQueryResult, ref PGError].yes(db.prepare(name, sql, nparams))
+  except PGError as e: Maybe[PGQueryResult, ref PGError].no(e)
