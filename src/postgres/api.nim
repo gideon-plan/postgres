@@ -1,7 +1,7 @@
 ## High-level PostgreSQL API wrapping libpq.
 
 import basis/code/throw
-import basis/code/maybe
+import basis/code/choice
 
 import postgres/ffi
 
@@ -271,17 +271,17 @@ proc get_copy_data*(db: PGDatabase; async: bool = false): (int, string) {.pg_err
 #== MAYBE OVERLOADS (NON-RAISING) ======================================================================================
 #=======================================================================================================================
 
-proc try_exec*(db: PGDatabase; sql: SqlText): Maybe[PGQueryResult, ref PGError] {.pg_err.} =
+proc try_exec*(db: PGDatabase; sql: SqlText): Choice[PGQueryResult] {.pg_err.} =
   ## Execute a simple query, returning Maybe instead of raising.
-  try: Maybe[PGQueryResult, ref PGError].yes(db.exec(sql))
-  except PGError as e: Maybe[PGQueryResult, ref PGError].no(e)
+  try: good(db.exec(sql))
+  except PGError as e: bad[PGQueryResult]("postgres", e.msg)
 
-proc try_exec*(db: PGDatabase; sql: SqlText; params: openArray[string]): Maybe[PGQueryResult, ref PGError] {.pg_err.} =
+proc try_exec*(db: PGDatabase; sql: SqlText; params: openArray[string]): Choice[PGQueryResult] {.pg_err.} =
   ## Execute a parameterized query, returning Maybe instead of raising.
-  try: Maybe[PGQueryResult, ref PGError].yes(db.exec(sql, params))
-  except PGError as e: Maybe[PGQueryResult, ref PGError].no(e)
+  try: good(db.exec(sql, params))
+  except PGError as e: bad[PGQueryResult]("postgres", e.msg)
 
-proc try_prepare*(db: PGDatabase; name: StmtName; sql: SqlText; nparams: int = 0): Maybe[PGQueryResult, ref PGError] {.pg_err.} =
+proc try_prepare*(db: PGDatabase; name: StmtName; sql: SqlText; nparams: int = 0): Choice[PGQueryResult] {.pg_err.} =
   ## Prepare a named statement, returning Maybe instead of raising.
-  try: Maybe[PGQueryResult, ref PGError].yes(db.prepare(name, sql, nparams))
-  except PGError as e: Maybe[PGQueryResult, ref PGError].no(e)
+  try: good(db.prepare(name, sql, nparams))
+  except PGError as e: bad[PGQueryResult]("postgres", e.msg)
