@@ -3,6 +3,7 @@
 ## Source: libpq-fe.h from PostgreSQL 18 (REL_18_BETA1).
 ## 174 PQ functions bound.
 
+import segfaults
 import basis/code/throw
 
 standard_pragmas()

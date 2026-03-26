@@ -271,17 +271,33 @@ proc get_copy_data*(db: PGDatabase; async: bool = false): (int, string) {.pg_err
 #== MAYBE OVERLOADS (NON-RAISING) ======================================================================================
 #=======================================================================================================================
 
+proc try_open*(conninfo: string): Choice[PGDatabase] {.pg_err.} =
+  ## Connect to a PostgreSQL server, returning Choice instead of raising.
+  try: good(open(conninfo))
+  except PGError as e: bad[PGDatabase]("postgres", e.msg)
+
 proc try_exec*(db: PGDatabase; sql: SqlText): Choice[PGQueryResult] {.pg_err.} =
-  ## Execute a simple query, returning Maybe instead of raising.
+  ## Execute a simple query, returning Choice instead of raising.
   try: good(db.exec(sql))
   except PGError as e: bad[PGQueryResult]("postgres", e.msg)
 
 proc try_exec*(db: PGDatabase; sql: SqlText; params: openArray[string]): Choice[PGQueryResult] {.pg_err.} =
-  ## Execute a parameterized query, returning Maybe instead of raising.
+  ## Execute a parameterized query, returning Choice instead of raising.
   try: good(db.exec(sql, params))
   except PGError as e: bad[PGQueryResult]("postgres", e.msg)
 
 proc try_prepare*(db: PGDatabase; name: StmtName; sql: SqlText; nparams: int = 0): Choice[PGQueryResult] {.pg_err.} =
-  ## Prepare a named statement, returning Maybe instead of raising.
+  ## Prepare a named statement, returning Choice instead of raising.
   try: good(db.prepare(name, sql, nparams))
   except PGError as e: bad[PGQueryResult]("postgres", e.msg)
+
+proc try_exec_prepared*(db: PGDatabase; name: StmtName;
+                        params: openArray[string]): Choice[PGQueryResult] {.pg_err.} =
+  ## Execute a prepared statement, returning Choice instead of raising.
+  try: good(db.exec_prepared(name, params))
+  except PGError as e: bad[PGQueryResult]("postgres", e.msg)
+
+proc try_get_copy_data*(db: PGDatabase; async: bool = false): Choice[(int, string)] {.pg_err.} =
+  ## Receive COPY data, returning Choice instead of raising.
+  try: good(get_copy_data(db, async))
+  except PGError as e: bad[(int, string)]("postgres", e.msg)
