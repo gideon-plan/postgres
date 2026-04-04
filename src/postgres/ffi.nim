@@ -1,3 +1,4 @@
+{.experimental: "strictFuncs".}
 ## PostgreSQL libpq C API bindings.
 ##
 ## Source: libpq-fe.h from PostgreSQL 18 (REL_18_BETA1).

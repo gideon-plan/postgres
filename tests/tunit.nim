@@ -1,3 +1,4 @@
+{.experimental: "strictFuncs".}
 ## Unit tests for distinct types and error types (no server required).
 
 import std/unittest

@@ -1,3 +1,4 @@
+{.experimental: "strictFuncs".}
 ## API integration tests (requires PostgreSQL server on localhost:15432).
 
 import std/unittest

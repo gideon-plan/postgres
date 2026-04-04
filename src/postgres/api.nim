@@ -1,3 +1,4 @@
+{.experimental: "strictFuncs".}
 ## High-level PostgreSQL API wrapping libpq.
 
 import basis/code/throw

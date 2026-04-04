@@ -1,3 +1,4 @@
+{.experimental: "strictFuncs".}
 ## Integration test: verso against live PostgreSQL server.
 ##
 ## Requires: podman run -d --name verso-pg -p 5432:5432 -e POSTGRES_PASSWORD=test -e POSTGRES_DB=verso docker.io/postgres:17

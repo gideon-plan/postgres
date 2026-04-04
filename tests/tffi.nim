@@ -1,3 +1,4 @@
+{.experimental: "strictFuncs".}
 ## FFI smoke tests (no server required).
 
 import std/unittest

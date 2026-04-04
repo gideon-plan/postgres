@@ -1,3 +1,4 @@
+{.experimental: "strictFuncs".}
 ## PostgreSQL libpq binding for Nim.
 
 import postgres/api
