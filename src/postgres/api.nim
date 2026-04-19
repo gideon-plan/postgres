@@ -97,7 +97,7 @@ proc raw*(r: PGQueryResult): PGresult {.ok_inline.} =
   ## Access the underlying PGresult.
   r.res
 
-proc status*(r: PGQueryResult): ExecStatusType {.ok.} =
+proc status*(r: PGQueryResult): ExecStatusKind {.ok.} =
   ## Get the execution status of the result.
   PQresultStatus(r.res)
 
@@ -240,7 +240,7 @@ proc error_message*(db: PGDatabase): string {.ok.} =
   ## Get the most recent error message.
   $PQerrorMessage(db.conn)
 
-proc transaction_status*(db: PGDatabase): PGTransactionStatusType {.ok.} =
+proc transaction_status*(db: PGDatabase): PGTransactionStatusKind {.ok.} =
   ## Get the current in-transaction status.
   PQtransactionStatus(db.conn)
 

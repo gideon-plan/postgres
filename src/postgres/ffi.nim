@@ -24,7 +24,7 @@ const InvalidOid*: Oid = 0
 #=======================================================================================================================
 
 type
-  ConnStatusType* {.importc: "ConnStatusType".} = enum
+  ConnStatusKind* {.importc: "ConnStatusKind".} = enum
     CONNECTION_OK = 0
     CONNECTION_BAD = 1
     CONNECTION_STARTED = 2
@@ -42,14 +42,14 @@ type
     CONNECTION_ALLOCATED = 14
     CONNECTION_AUTHENTICATING = 15
 
-  PostgresPollingStatusType* {.importc: "PostgresPollingStatusType".} = enum
+  PostgresPollingStatusKind* {.importc: "PostgresPollingStatusKind".} = enum
     PGRES_POLLING_FAILED = 0
     PGRES_POLLING_READING = 1
     PGRES_POLLING_WRITING = 2
     PGRES_POLLING_OK = 3
     PGRES_POLLING_ACTIVE = 4
 
-  ExecStatusType* {.importc: "ExecStatusType".} = enum
+  ExecStatusKind* {.importc: "ExecStatusKind".} = enum
     PGRES_EMPTY_QUERY = 0
     PGRES_COMMAND_OK = 1
     PGRES_TUPLES_OK = 2
@@ -64,7 +64,7 @@ type
     PGRES_PIPELINE_ABORTED = 11
     PGRES_TUPLES_CHUNK = 12
 
-  PGTransactionStatusType* {.importc: "PGTransactionStatusType".} = enum
+  PGTransactionStatusKind* {.importc: "PGTransactionStatusKind".} = enum
     PQTRANS_IDLE = 0
     PQTRANS_ACTIVE = 1
     PQTRANS_INTRANS = 2
@@ -159,7 +159,7 @@ type pg_usec_time_t* = int64
 
 proc PQconnectStart*(conninfo: cstring): PGconn {.importc.}
 proc PQconnectStartParams*(keywords, values: ptr cstring; expand_dbname: cint): PGconn {.importc.}
-proc PQconnectPoll*(conn: PGconn): PostgresPollingStatusType {.importc.}
+proc PQconnectPoll*(conn: PGconn): PostgresPollingStatusKind {.importc.}
 proc PQconnectdb*(conninfo: cstring): PGconn {.importc.}
 proc PQconnectdbParams*(keywords, values: ptr cstring; expand_dbname: cint): PGconn {.importc.}
 proc PQsetdbLogin*(pghost, pgport, pgoptions, pgtty, dbName, login, pwd: cstring): PGconn {.importc.}
@@ -169,7 +169,7 @@ proc PQconninfoParse*(conninfo: cstring; errmsg: ptr cstring): ptr PQconninfoOpt
 proc PQconninfo*(conn: PGconn): ptr PQconninfoOption {.importc.}
 proc PQconninfoFree*(connOptions: ptr PQconninfoOption) {.importc.}
 proc PQresetStart*(conn: PGconn): cint {.importc.}
-proc PQresetPoll*(conn: PGconn): PostgresPollingStatusType {.importc.}
+proc PQresetPoll*(conn: PGconn): PostgresPollingStatusKind {.importc.}
 proc PQreset*(conn: PGconn) {.importc.}
 
 #=======================================================================================================================
@@ -179,8 +179,8 @@ proc PQreset*(conn: PGconn) {.importc.}
 proc PQcancelCreate*(conn: PGconn): PGcancelConn {.importc.}
 proc PQcancelStart*(cancelConn: PGcancelConn): cint {.importc.}
 proc PQcancelBlocking*(cancelConn: PGcancelConn): cint {.importc.}
-proc PQcancelPoll*(cancelConn: PGcancelConn): PostgresPollingStatusType {.importc.}
-proc PQcancelStatus*(cancelConn: PGcancelConn): ConnStatusType {.importc.}
+proc PQcancelPoll*(cancelConn: PGcancelConn): PostgresPollingStatusKind {.importc.}
+proc PQcancelStatus*(cancelConn: PGcancelConn): ConnStatusKind {.importc.}
 proc PQcancelSocket*(cancelConn: PGcancelConn): cint {.importc.}
 proc PQcancelErrorMessage*(cancelConn: PGcancelConn): cstring {.importc.}
 proc PQcancelReset*(cancelConn: PGcancelConn) {.importc.}
@@ -208,8 +208,8 @@ proc PQhostaddr*(conn: PGconn): cstring {.importc.}
 proc PQport*(conn: PGconn): cstring {.importc.}
 proc PQtty*(conn: PGconn): cstring {.importc.}
 proc PQoptions*(conn: PGconn): cstring {.importc.}
-proc PQstatus*(conn: PGconn): ConnStatusType {.importc.}
-proc PQtransactionStatus*(conn: PGconn): PGTransactionStatusType {.importc.}
+proc PQstatus*(conn: PGconn): ConnStatusKind {.importc.}
+proc PQtransactionStatus*(conn: PGconn): PGTransactionStatusKind {.importc.}
 proc PQparameterStatus*(conn: PGconn; paramName: cstring): cstring {.importc.}
 proc PQprotocolVersion*(conn: PGconn): cint {.importc.}
 proc PQfullProtocolVersion*(conn: PGconn): cint {.importc.}
@@ -362,8 +362,8 @@ proc PQfn*(conn: PGconn; fnid: cint; result_buf, result_len: ptr cint;
 #== RESULT ACCESSORS ===================================================================================================
 #=======================================================================================================================
 
-proc PQresultStatus*(res: PGresult): ExecStatusType {.importc.}
-proc PQresStatus*(status: ExecStatusType): cstring {.importc.}
+proc PQresultStatus*(res: PGresult): ExecStatusKind {.importc.}
+proc PQresStatus*(status: ExecStatusKind): cstring {.importc.}
 proc PQresultErrorMessage*(res: PGresult): cstring {.importc.}
 proc PQresultVerboseErrorMessage*(res: PGresult; verbosity: PGVerbosity;
                                   show_context: PGContextVisibility): cstring {.importc.}
@@ -408,7 +408,7 @@ proc PQsendClosePortal*(conn: PGconn; portal: cstring): cint {.importc.}
 
 proc PQclear*(res: PGresult) {.importc.}
 proc PQfreemem*(p: pointer) {.importc.}
-proc PQmakeEmptyPGresult*(conn: PGconn; status: ExecStatusType): PGresult {.importc.}
+proc PQmakeEmptyPGresult*(conn: PGconn; status: ExecStatusKind): PGresult {.importc.}
 proc PQcopyResult*(src: PGresult; flags: cint): PGresult {.importc.}
 proc PQsetResultAttrs*(res: PGresult; numAttributes: cint; attDescs: ptr PGresAttDesc): cint {.importc.}
 proc PQresultAlloc*(res: PGresult; nBytes: csize_t): pointer {.importc.}

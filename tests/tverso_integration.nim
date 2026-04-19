@@ -18,7 +18,7 @@ suite "verso postgres integration":
     discard db.exec(SqlText("DROP TABLE IF EXISTS verso_delta"))
     discard db.exec(SqlText("DROP TABLE IF EXISTS verso_entity"))
     discard db.exec(SqlText("DROP TABLE IF EXISTS verso_mutation"))
-    discard db.exec(SqlText("CREATE TABLE verso_mutation (id TEXT PRIMARY KEY, parent TEXT, actor TEXT, timestamp BIGINT, plan_version INT, space TEXT, partition INT)"))
+    discard db.exec(SqlText("CREATE TABLE verso_mutation (id TEXT PRIMARY KEY, parent TEXT, actor TEXT, created BIGINT, plan_version INT, space TEXT, partition INT)"))
     discard db.exec(SqlText("CREATE TABLE verso_entity (mutation_id TEXT, link_type TEXT, instance_id TEXT, life INT)"))
     discard db.exec(SqlText("CREATE TABLE verso_delta (mutation_id TEXT, knot TEXT, value TEXT, op INT, life INT)"))
 
@@ -26,14 +26,14 @@ suite "verso postgres integration":
     db.close()
 
   test "store and load mutation":
-    var m = Mutation(parent: "", actor: "admin", timestamp: 100,
-                     plan_version: 1, space: "home", partition: pData,
+    var m = Mutation(parent: "", actor: "admin", created: 100,
+                     plan_version: 1, space: "home", partition: Partition.Data,
                      entities: @[entity("Person", "abc")],
                      deltas: @[delta_add("name", "Alice")])
     stamp(m)
 
     discard db.exec(SqlText("INSERT INTO verso_mutation VALUES ($1,$2,$3,$4,$5,$6,$7)"),
-            [m.id, m.parent, m.actor, $m.timestamp, $m.plan_version, m.space, $ord(m.partition)])
+            [m.id, m.parent, m.actor, $m.created, $m.plan_version, m.space, $ord(m.partition)])
 
     for e in m.entities:
       discard db.exec(SqlText("INSERT INTO verso_entity VALUES ($1,$2,$3,$4)"),
@@ -43,7 +43,7 @@ suite "verso postgres integration":
       discard db.exec(SqlText("INSERT INTO verso_delta VALUES ($1,$2,$3,$4,$5)"),
               [m.id, d.knot, d.value, $ord(d.op), $ord(d.life)])
 
-    let r = db.exec(SqlText("SELECT id, parent, actor, timestamp, plan_version, space, partition FROM verso_mutation WHERE id = $1"), [m.id])
+    let r = db.exec(SqlText("SELECT id, parent, actor, created, plan_version, space, partition FROM verso_mutation WHERE id = $1"), [m.id])
     check r.ntuples == 1
     check r.getvalue(RowIdx(0), ColIdx(0)) == m.id
     check r.getvalue(RowIdx(0), ColIdx(2)) == "admin"
@@ -64,21 +64,21 @@ suite "verso postgres integration":
     check r.ntuples == 0
 
   test "parent chain":
-    var m1 = Mutation(parent: "", actor: "admin", timestamp: 100,
-                      plan_version: 1, space: "home", partition: pData,
+    var m1 = Mutation(parent: "", actor: "admin", created: 100,
+                      plan_version: 1, space: "home", partition: Partition.Data,
                       entities: @[entity("Person", "abc")],
                       deltas: @[delta_add("name", "Alice")])
     stamp(m1)
     discard db.exec(SqlText("INSERT INTO verso_mutation VALUES ($1,$2,$3,$4,$5,$6,$7)"),
-            [m1.id, m1.parent, m1.actor, $m1.timestamp, $m1.plan_version, m1.space, $ord(m1.partition)])
+            [m1.id, m1.parent, m1.actor, $m1.created, $m1.plan_version, m1.space, $ord(m1.partition)])
 
-    var m2 = Mutation(parent: m1.id, actor: "admin", timestamp: 200,
-                      plan_version: 1, space: "home", partition: pData,
+    var m2 = Mutation(parent: m1.id, actor: "admin", created: 200,
+                      plan_version: 1, space: "home", partition: Partition.Data,
                       entities: @[entity("Person", "abc")],
                       deltas: @[delta_add("name", "Bob")])
     stamp(m2)
     discard db.exec(SqlText("INSERT INTO verso_mutation VALUES ($1,$2,$3,$4,$5,$6,$7)"),
-            [m2.id, m2.parent, m2.actor, $m2.timestamp, $m2.plan_version, m2.space, $ord(m2.partition)])
+            [m2.id, m2.parent, m2.actor, $m2.created, $m2.plan_version, m2.space, $ord(m2.partition)])
 
     let cnt = db.exec(SqlText("SELECT COUNT(*) FROM verso_mutation"))
     check cnt.getvalue(RowIdx(0), ColIdx(0)) == "2"
@@ -87,13 +87,13 @@ suite "verso postgres integration":
     check r.getvalue(RowIdx(0), ColIdx(0)) == m1.id
 
   test "all Life states":
-    var m = Mutation(parent: "", actor: "admin", timestamp: 999,
-                     plan_version: 42, space: "test", partition: pMesh,
+    var m = Mutation(parent: "", actor: "admin", created: 999,
+                     plan_version: 42, space: "test", partition: Partition.Mesh,
                      entities: @[entity("A", "a1", Life.Smash)],
-                     deltas: @[Delta(knot: "x", value: "1", op: doRemove, life: Life.Gone)])
+                     deltas: @[Delta(knot: "x", value: "1", op: DeltaOp.Remove, life: Life.Gone)])
     stamp(m)
     discard db.exec(SqlText("INSERT INTO verso_mutation VALUES ($1,$2,$3,$4,$5,$6,$7)"),
-            [m.id, m.parent, m.actor, $m.timestamp, $m.plan_version, m.space, $ord(m.partition)])
+            [m.id, m.parent, m.actor, $m.created, $m.plan_version, m.space, $ord(m.partition)])
     for e in m.entities:
       discard db.exec(SqlText("INSERT INTO verso_entity VALUES ($1,$2,$3,$4)"),
               [m.id, e.link_type, e.instance_id, $ord(e.life)])
@@ -108,4 +108,4 @@ suite "verso postgres integration":
     check dr.getvalue(RowIdx(0), ColIdx(0)) == $ord(Life.Gone)
 
     let mr = db.exec(SqlText("SELECT partition FROM verso_mutation WHERE id = $1"), [m.id])
-    check mr.getvalue(RowIdx(0), ColIdx(0)) == $ord(pMesh)
+    check mr.getvalue(RowIdx(0), ColIdx(0)) == $ord(Partition.Mesh)

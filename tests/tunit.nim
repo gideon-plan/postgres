@@ -242,7 +242,7 @@ suite "distinct type safety":
 # -----------------------------------------------------------------------
 
 suite "ffi enum values":
-  test "ConnStatusType range":
+  test "ConnStatusKind range":
     check ord(CONNECTION_OK) == 0
     check ord(CONNECTION_BAD) == 1
     check ord(CONNECTION_STARTED) == 2
@@ -260,7 +260,7 @@ suite "ffi enum values":
     check ord(CONNECTION_ALLOCATED) == 14
     check ord(CONNECTION_AUTHENTICATING) == 15
 
-  test "ExecStatusType range":
+  test "ExecStatusKind range":
     check ord(PGRES_EMPTY_QUERY) == 0
     check ord(PGRES_COMMAND_OK) == 1
     check ord(PGRES_TUPLES_OK) == 2
@@ -275,7 +275,7 @@ suite "ffi enum values":
     check ord(PGRES_PIPELINE_ABORTED) == 11
     check ord(PGRES_TUPLES_CHUNK) == 12
 
-  test "PGTransactionStatusType range":
+  test "PGTransactionStatusKind range":
     check ord(PQTRANS_IDLE) == 0
     check ord(PQTRANS_ACTIVE) == 1
     check ord(PQTRANS_INTRANS) == 2
@@ -308,7 +308,7 @@ suite "ffi enum values":
     check ord(PQAUTHDATA_PROMPT_OAUTH_DEVICE) == 0
     check ord(PQAUTHDATA_OAUTH_BEARER_TOKEN) == 1
 
-  test "PostgresPollingStatusType range":
+  test "PostgresPollingStatusKind range":
     check ord(PGRES_POLLING_FAILED) == 0
     check ord(PGRES_POLLING_READING) == 1
     check ord(PGRES_POLLING_WRITING) == 2
@@ -327,7 +327,7 @@ suite "ffi constants and utilities":
     let o: Oid = 12345'u32
     check o == 12345'u32
 
-  test "PQresStatus for all ExecStatusType values":
+  test "PQresStatus for all ExecStatusKind values":
     check $PQresStatus(PGRES_EMPTY_QUERY) == "PGRES_EMPTY_QUERY"
     check $PQresStatus(PGRES_COMMAND_OK) == "PGRES_COMMAND_OK"
     check $PQresStatus(PGRES_TUPLES_OK) == "PGRES_TUPLES_OK"
